@@ -5,8 +5,8 @@ use eyre::Result;
 use solana_client::rpc_config::RpcBlockConfig;
 use solana_data_aggregator::{fetcher::Fetcher, monitor::SlotMonitor, storage::StorageInterface};
 use solana_transaction_status::UiTransactionEncoding;
+use tokio::signal::ctrl_c;
 use tokio_util::sync::CancellationToken;
-
 #[tokio::main]
 async fn main() -> Result<()> {
     // config env
@@ -18,8 +18,8 @@ async fn main() -> Result<()> {
     let db_path = std::env::var("DB_PATH")?;
 
     // create and start slot monitor
-    let monitor = SlotMonitor::new(provider_ws.as_str()).await?;
-    let monitor_fut = tokio::spawn(async move { monitor.start_monitoring(token.clone()).await });
+    let monitor = SlotMonitor::new(provider_ws.as_str(), token.clone()).await?;
+    let monitor_fut = tokio::spawn(async move { monitor.start_monitoring().await });
 
     // create storage instance
     let storage_interface = StorageInterface::new(&db_path);
@@ -34,5 +34,12 @@ async fn main() -> Result<()> {
 
     // create aggregator
 
+    // graceful shutdown monitor
+    let shutdown_fut = tokio::spawn(async move {
+        ctrl_c().await.unwrap();
+        token.cancel();
+    });
+
+    tokio::join!(monitor_fut, shutdown_fut);
     Ok(())
 }

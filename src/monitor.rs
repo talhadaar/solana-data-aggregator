@@ -14,26 +14,28 @@ pub struct SlotMonitor {
     client: Arc<PubsubClient>,
     sender: UnboundedSender<Slot>,
     pub receiver: UnboundedReceiver<Slot>,
+    token: CancellationToken,
 }
 
 impl SlotMonitor {
-    pub async fn new(wss_url: &str) -> Result<Self> {
+    pub async fn new(wss_url: &str, token: CancellationToken) -> Result<Self> {
         let client = Arc::new(PubsubClient::new(wss_url).await?);
         let (sender, receiver) = unbounded_channel();
         Ok(Self {
             client,
             sender,
             receiver,
+            token,
         })
     }
 
-    pub async fn start_monitoring(&self, token: CancellationToken) -> Result<()> {
+    pub async fn start_monitoring(&self) -> Result<()> {
         // create subscription
         let (mut sub, unsub) = self.client.slot_subscribe().await?;
 
         loop {
             tokio::select! {
-                _ = token.cancelled() => {
+                _ = self.token.cancelled() => {
                     // If cancellation occurs, unsubscribe and return
                     unsub().await;
                     break;

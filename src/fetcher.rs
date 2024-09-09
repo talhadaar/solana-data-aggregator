@@ -4,23 +4,21 @@ use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcBlockConf
 use solana_program::{clock::Slot, system_program::ID};
 use solana_transaction_status::{
     EncodedTransaction, EncodedTransactionWithStatusMeta, UiConfirmedBlock, UiInstruction,
-    UiMessage, UiParsedInstruction, UiTransactionEncoding,
+    UiMessage, UiParsedInstruction,
 };
 use std::sync::Arc;
 
 pub fn parse_instruction(instruction: &UiInstruction) -> Option<Transaction> {
-    if let UiInstruction::Parsed(parsed) = instruction {
-        if let UiParsedInstruction::Parsed(parsed_instruction) = parsed {
-            if parsed_instruction.program_id == ID.to_string() {
-                if parsed_instruction.parsed.get("type")?.as_str()? == "transfer" {
-                    let info = parsed_instruction.parsed.get("info")?.as_object()?;
-                    return Some(Transaction {
-                        source: info.get("source")?.as_str()?.to_string(),
-                        destination: info.get("destination")?.as_str()?.to_string(),
-                        amount: info.get("lamports")?.as_number()?.as_u64()?,
-                    });
-                }
-            }
+    if let UiInstruction::Parsed(UiParsedInstruction::Parsed(parsed_instruction)) = instruction {
+        if parsed_instruction.program_id == ID.to_string()
+            && parsed_instruction.parsed.get("type")?.as_str()? == "transfer"
+        {
+            let info = parsed_instruction.parsed.get("info")?.as_object()?;
+            return Some(Transaction {
+                source: info.get("source")?.as_str()?.to_string(),
+                destination: info.get("destination")?.as_str()?.to_string(),
+                amount: info.get("lamports")?.as_number()?.as_u64()?,
+            });
         }
     }
     None

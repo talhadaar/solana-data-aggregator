@@ -23,13 +23,13 @@ impl StorageInterface {
     pub fn add_block(&self, slot: Slot, block: &Block) -> Result<(), rocksdb::Error> {
         let db = self.0.lock().unwrap();
         let cf = db.cf_handle("blocks").unwrap();
-        db.put_cf(cf, &slot.to_le_bytes(), serde_json::to_vec(block).unwrap())
+        db.put_cf(cf, slot.to_le_bytes(), serde_json::to_vec(block).unwrap())
     }
 
     pub fn add_transaction(&self, slot: Slot, tx: &Transaction) -> Result<(), rocksdb::Error> {
         let db = self.0.lock().unwrap();
         let cf = db.cf_handle("transactions").unwrap();
-        db.put_cf(cf, &slot.to_le_bytes(), serde_json::to_vec(tx).unwrap())
+        db.put_cf(cf, slot.to_le_bytes(), serde_json::to_vec(tx).unwrap())
     }
 
     pub fn add_account(&self, account: &Account) -> Result<(), rocksdb::Error> {
@@ -41,7 +41,7 @@ impl StorageInterface {
     pub fn get_block(&self, slot: Slot) -> Result<Option<Block>, rocksdb::Error> {
         let db = self.0.lock().unwrap();
         let cf = db.cf_handle("blocks").unwrap();
-        match db.get_cf(cf, &slot.to_le_bytes()) {
+        match db.get_cf(cf, slot.to_le_bytes()) {
             Ok(Some(data)) => Ok(Some(serde_json::from_slice(&data).unwrap())),
             Ok(None) => Ok(None),
             Err(e) => Err(e),
@@ -51,7 +51,7 @@ impl StorageInterface {
     pub fn get_transaction(&self, slot: Slot) -> Result<Option<Transaction>, rocksdb::Error> {
         let db = self.0.lock().unwrap();
         let cf = db.cf_handle("transactions").unwrap();
-        match db.get_cf(cf, &slot.to_le_bytes()) {
+        match db.get_cf(cf, slot.to_le_bytes()) {
             Ok(Some(data)) => Ok(Some(serde_json::from_slice(&data).unwrap())),
             Ok(None) => Ok(None),
             Err(e) => Err(e),
