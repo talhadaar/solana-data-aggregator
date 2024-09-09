@@ -26,11 +26,7 @@ impl StorageInterface {
         db.put_cf(cf, &slot.to_le_bytes(), serde_json::to_vec(block).unwrap())
     }
 
-    pub fn add_transaction(
-        &self,
-        slot: Slot,
-        tx: &NativeTransaction,
-    ) -> Result<(), rocksdb::Error> {
+    pub fn add_transaction(&self, slot: Slot, tx: &Transaction) -> Result<(), rocksdb::Error> {
         let db = self.0.lock().unwrap();
         let cf = db.cf_handle("transactions").unwrap();
         db.put_cf(cf, &slot.to_le_bytes(), serde_json::to_vec(tx).unwrap())
@@ -52,7 +48,7 @@ impl StorageInterface {
         }
     }
 
-    pub fn get_transaction(&self, slot: Slot) -> Result<Option<NativeTransaction>, rocksdb::Error> {
+    pub fn get_transaction(&self, slot: Slot) -> Result<Option<Transaction>, rocksdb::Error> {
         let db = self.0.lock().unwrap();
         let cf = db.cf_handle("transactions").unwrap();
         match db.get_cf(cf, &slot.to_le_bytes()) {
