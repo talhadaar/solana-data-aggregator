@@ -1,8 +1,27 @@
-// pub type Result<T> = std::result::Result<T, Error>;
+use crate::error::{Error, Result};
 use serde::{Deserialize, Serialize};
+use tokio::sync::oneshot;
 
 pub type Hash = String;
 pub type Address = String;
+
+pub enum StreamerResult {
+    Block(Block),
+    EOS(),
+    Error(Error),
+}
+
+pub enum ActionsResult {
+    BlockAdded(Result<()>),
+    GetAccounts(Result<Vec<Account>>),
+    GetTransactions(Result<Vec<Transaction>>),
+}
+
+pub enum Actions {
+    AddBlock(Block, oneshot::Sender<ActionsResult>),
+    GetTransactions(ActionsResult),
+    GetAccounts(ActionsResult),
+}
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Transaction {

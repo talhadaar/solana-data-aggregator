@@ -1,5 +1,5 @@
-use crate::types::*;
-use eyre::Result;
+use crate::error::*;
+use crate::{traits::BlockStream, types::*};
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcBlockConfig};
 use solana_program::{clock::Slot, system_program::ID};
 use solana_transaction_status::{
@@ -7,6 +7,8 @@ use solana_transaction_status::{
     UiMessage, UiParsedInstruction,
 };
 use std::sync::Arc;
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio_util::sync::CancellationToken;
 
 pub fn parse_instruction(instruction: &UiInstruction) -> Option<Transaction> {
     if let UiInstruction::Parsed(UiParsedInstruction::Parsed(parsed_instruction)) = instruction {
@@ -66,25 +68,72 @@ impl From<UiConfirmedBlock> for Block {
 }
 
 /// Fetches block data and parses it into storeable types
-pub struct Fetcher {
+pub struct Streamer {
     client: Arc<RpcClient>,
     block_config: Arc<RpcBlockConfig>,
+    slot_monitor: UnboundedReceiver<Slot>,
+    token: CancellationToken,
 }
 
-impl Fetcher {
-    pub fn new(rpc_url: String, block_config: RpcBlockConfig) -> Self {
+impl Streamer {
+    pub async fn new(
+        rpc_url: String,
+        token: CancellationToken,
+        slot_monitor: UnboundedReceiver<Slot>,
+        block_config: RpcBlockConfig,
+    ) -> Result<Self> {
         let client = RpcClient::new(rpc_url);
-        Self {
+        Ok(Self {
             client: Arc::new(client),
             block_config: Arc::new(block_config),
-        }
+            slot_monitor,
+            token,
+        })
     }
 
     pub async fn fetch_block(&self, slot: Slot) -> Result<Block> {
-        let block = self
+        let block = match self
             .client
             .get_block_with_config(slot, *self.block_config)
-            .await?;
+            .await
+        {
+            Ok(block) => block,
+            Err(e) => return Err(Error::RpcError(e)),
+        };
         Ok(Block::from(block))
+    }
+
+    pub async fn next(&mut self) -> StreamerResult {
+        loop {
+            if self.token.is_cancelled() {
+                return StreamerResult::Error(Error::Termination);
+            }
+
+            return match self.slot_monitor.recv().await {
+                Some(slot) => match self.fetch_block(slot).await {
+                    Ok(block) => StreamerResult::Block(block),
+                    Err(e) => StreamerResult::Error(e),
+                },
+                None => StreamerResult::EOS(),
+            };
+        }
+    }
+}
+
+impl BlockStream for Streamer {
+    async fn next(&mut self) -> StreamerResult {
+        loop {
+            if self.token.is_cancelled() {
+                return StreamerResult::Error(Error::Termination);
+            }
+
+            return match self.slot_monitor.recv().await {
+                Some(slot) => match self.fetch_block(slot).await {
+                    Ok(block) => StreamerResult::Block(block),
+                    Err(e) => StreamerResult::Error(e),
+                },
+                None => StreamerResult::EOS(),
+            };
+        }
     }
 }
