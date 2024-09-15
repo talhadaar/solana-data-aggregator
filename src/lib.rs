@@ -1,3 +1,4 @@
+pub mod aggregator;
 pub mod error;
 pub mod monitor;
 pub mod storage;

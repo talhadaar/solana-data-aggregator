@@ -1,3 +1,4 @@
+use nanodb::error::NanoDBError;
 use solana_client::client_error::ClientError;
 use solana_client::pubsub_client::PubsubClientError;
 use std::env::VarError;
@@ -24,5 +25,11 @@ pub enum Error {
 impl From<VarError> for Error {
     fn from(e: VarError) -> Self {
         Self::VarError(e.to_string())
+    }
+}
+
+impl From<NanoDBError> for Error {
+    fn from(e: NanoDBError) -> Self {
+        Self::StorageError(e.to_string())
     }
 }

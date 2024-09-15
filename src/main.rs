@@ -22,13 +22,11 @@ async fn main() -> Result<()> {
     let provider_ws = std::env::var("PROVIDER_WS_URL")?;
     let db_path = std::env::var("DB_PATH")?;
 
-    // // create and start slot monitor
-    // let monitor = SlotMonitor::new(provider_ws.as_str(), token.clone()).await?;
-    // let monitor_fut = tokio::spawn(async move { monitor.start_monitoring().await });
+    // create and start slot monitor
+    let monitor = SlotMonitor::new(provider_ws.as_str(), token.clone()).await?;
+    let monitor_fut = tokio::spawn(async move { monitor.start_monitoring().await });
 
-    // let monitor_clone = monitor.clone();
-
-    // // create storage instance
+    // create storage instance
     // let storage_interface = Storage::new(&db_path);
 
     // // fetcher
