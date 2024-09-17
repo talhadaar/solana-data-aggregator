@@ -49,7 +49,7 @@ impl SlotMonitor {
             }
         };
 
-        log::info!("Starting slot monitoring");
+        log::debug!("Starting slot monitoring");
         loop {
             if self.token.is_cancelled() {
                 // If cancellation occurs, unsubscribe and return

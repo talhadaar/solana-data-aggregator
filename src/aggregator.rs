@@ -31,12 +31,12 @@ impl<T: BlockStream, S: Storage> Aggregator<T, S> {
                     // TODO should be possible to move this out to a separate thread and monitor resolution of future,
                     // rather than blocking the streamer thread
                     // will improve data velocity
-                    log::debug!("Recording block: {:?}", block.height);
+                    log::info!("Recording block: {:?}", block.height);
                     self.storage.add_block(&block).await?;
                 }
                 StreamerResult::Error(error) => {
                     // check if a slot was missing or skipped
-                    log::debug!("{}", error);
+                    log::warn!("{}", error);
                     if let Error::SlotSkipped(_) | Error::SlotMissing(_) = error {
                         continue;
                     }
