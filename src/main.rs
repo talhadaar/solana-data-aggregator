@@ -1,8 +1,10 @@
 extern crate dotenv;
+use std::{net::SocketAddr, str::FromStr};
+
 use dotenv::dotenv;
 
-use solana_data_aggregator::{aggregator, error::Result, monitor, storage, streamer};
 use solana_client::rpc_config::RpcBlockConfig;
+use solana_data_aggregator::{aggregator, error::Result, monitor, storage, streamer};
 use solana_transaction_status::UiTransactionEncoding;
 use tokio::{signal::ctrl_c, sync::mpsc};
 use tokio_util::sync::CancellationToken;
@@ -19,6 +21,7 @@ async fn main() -> Result<()> {
     let provider_rpc = std::env::var("PROVIDER_RPC_URL")?;
     let provider_ws = std::env::var("PROVIDER_WS_URL")?;
     let db_path = std::env::var("DB_PATH")?;
+    let api_socker = std::env::var("API_SOCKET")?;
 
     // create and start slot monitor
     let (monitor_tx, monitor_rx) = mpsc::unbounded_channel();
@@ -26,9 +29,11 @@ async fn main() -> Result<()> {
     let monitor =
         monitor::SlotMonitor::new(provider_ws.as_str(), monitor_token, monitor_tx).await?;
     let monitor_fut = tokio::spawn(async move { monitor.start_monitoring().await });
+    log::debug!("Slot monitor started");
 
     // create storage instance
     let storage = storage::Database::new(&db_path);
+    log::debug!("Storage initialized");
 
     // create streamer
     let block_config = RpcBlockConfig {
@@ -39,11 +44,23 @@ async fn main() -> Result<()> {
     let streamer_token = token.clone();
     let streamer =
         streamer::Streamer::new(provider_rpc, streamer_token, monitor_rx, block_config).await?;
+    log::debug!("Streamer initialized");
 
     // start aggregator
     let aggregator_token = token.clone();
-    let mut aggregator = aggregator::Aggregator::new(streamer, aggregator_token, storage);
+    let storage_clone = storage.clone();
+    let mut aggregator = aggregator::Aggregator::new(streamer, aggregator_token, storage_clone);
     let aggregator_fut = tokio::spawn(async move { aggregator.run().await });
+    log::debug!("Aggregator started");
+
+    // start api
+    let api_token = token.clone();
+    let api_fut = tokio::spawn(solana_data_aggregator::api::run_api(
+        SocketAddr::from_str(&api_socker).expect("Failed to encode socker address"),
+        storage,
+        api_token,
+    ));
+    log::debug!("API started");
 
     // graceful shutdown monitor
     let shutdown_token = token.clone();
@@ -53,6 +70,6 @@ async fn main() -> Result<()> {
         shutdown_token.cancel();
     });
 
-    let _ = tokio::join!(shutdown_fut, monitor_fut, aggregator_fut);
+    let _ = tokio::join!(shutdown_fut, monitor_fut, aggregator_fut, api_fut);
     Ok(())
 }

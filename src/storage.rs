@@ -25,6 +25,7 @@ pub struct ChainMedadata {
     pub last_block_height: u64,
 }
 
+#[derive(Debug, Clone)]
 pub struct Database(NanoDB);
 impl Database {
     pub fn new(path: &str) -> Self {
