@@ -5,9 +5,7 @@ use nanodb::nanodb::NanoDB;
 use serde::Deserialize;
 use serde::Serialize;
 use solana_program::clock::Slot;
-use solana_program::nonce::state::Data;
 use std::fmt::Display;
-use std::sync::{Arc, Mutex};
 
 pub const LATEST_BLOCKHEIGHT_KEY: &str = "latest_bh";
 

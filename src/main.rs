@@ -3,9 +3,7 @@ use dotenv::dotenv;
 
 use solana_aggregator::{aggregator, error::Result, monitor, storage, streamer};
 use solana_client::rpc_config::RpcBlockConfig;
-use solana_program::clock::Slot;
 use solana_transaction_status::UiTransactionEncoding;
-use std::sync::{Arc, Mutex};
 use tokio::{signal::ctrl_c, sync::mpsc};
 use tokio_util::sync::CancellationToken;
 

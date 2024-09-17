@@ -1,8 +1,5 @@
 use crate::error::*;
 use crate::types::*;
-use solana_client::client_error::reqwest::redirect::Action;
-use solana_program::clock::Slot;
-use tokio::sync::mpsc;
 
 pub trait Stream<T> {
     fn next(&mut self) -> impl std::future::Future<Output = Option<T>> + Send;
@@ -28,16 +25,9 @@ pub trait Storage {
     // async fn serve_queue(&self, actions_queue: ActionsQueueRx) -> Result<()>;
     /// Processes an action received from the [ActionsQueueRx]
     // async fn process_action(&self, action: Action) -> Result<()>;
-    async fn add_block(&mut self, block: &Block) -> Result<()> {
-        Ok(())
-    }
-    async fn get_transactions(&self, address: Address) -> Result<Vec<Transaction>> {
-        Ok(Vec::new())
-    }
-
-    async fn get_account(&self, address: &Address) -> Result<Account> {
-        Ok(Account::default())
-    }
+    async fn add_block(&mut self, block: &Block) -> Result<()>;
+    async fn get_transactions(&self, address: Address) -> Result<Vec<Transaction>>;
+    async fn get_account(&self, address: &Address) -> Result<Account>;
 }
 
 // /// Abstraction over the [Storage] trait for the [Aggregator]

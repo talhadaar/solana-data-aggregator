@@ -1,9 +1,8 @@
 use crate::error::*;
-use crate::traits::Monitor;
 use solana_client::nonblocking::pubsub_client::PubsubClient;
 use solana_program::slot_history::Slot;
 use std::sync::Arc;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::UnboundedSender;
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 

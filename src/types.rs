@@ -1,7 +1,5 @@
-use crate::error::{Error, Result};
+use crate::error::Error;
 use serde::{Deserialize, Serialize};
-use solana_program::clock::Slot;
-use tokio::sync::{mpsc, oneshot};
 
 pub type Hash = String;
 pub type Address = String;
