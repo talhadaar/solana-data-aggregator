@@ -8,12 +8,14 @@ pub trait Stream<T> {
 /// Returns latest produced block on Solana
 /// async because needs might need to do some async operations within it's scope
 /// Not expected to return a future
+#[trait_variant::make(Send)]
 pub trait BlockStream {
     async fn next(&mut self) -> StreamerResult;
 }
 
 /// Abstraction over database storage
 /// Monitors an [ActionsQueueRx] for new DB operations and executes them on the DB
+#[trait_variant::make(Send)]
 pub trait Storage {
     /// Monitors an [ActionsQueueRx] for new DB operations
     // async fn serve_queue(&self, actions_queue: ActionsQueueRx) -> Result<()>;
