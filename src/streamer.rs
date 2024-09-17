@@ -102,22 +102,6 @@ impl Streamer {
         };
         Ok(Block::from(block))
     }
-
-    pub async fn next(&mut self) -> StreamerResult {
-        loop {
-            if self.token.is_cancelled() {
-                return StreamerResult::Error(Error::Termination);
-            }
-
-            return match self.slot_monitor.recv().await {
-                Some(slot) => match self.fetch_block(slot).await {
-                    Ok(block) => StreamerResult::Block(block),
-                    Err(e) => StreamerResult::Error(e),
-                },
-                None => StreamerResult::EOS(),
-            };
-        }
-    }
 }
 
 impl BlockStream for Streamer {

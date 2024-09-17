@@ -7,24 +7,26 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
+#[derive(Debug)]
 pub struct SlotMonitor {
     client: Arc<PubsubClient>,
     sender: UnboundedSender<Slot>,
-    pub receiver: UnboundedReceiver<Slot>,
     token: CancellationToken,
 }
 
 impl SlotMonitor {
-    pub async fn new(wss_url: &str, token: CancellationToken) -> Result<Self> {
+    pub async fn new(
+        wss_url: &str,
+        token: CancellationToken,
+        monitor_tx: UnboundedSender<Slot>,
+    ) -> Result<Self> {
         let client = Arc::new(match PubsubClient::new(wss_url).await {
             Ok(client) => client,
             Err(e) => return Err(Error::PubSubError(e)),
         });
-        let (sender, receiver) = unbounded_channel();
         Ok(Self {
             client,
-            sender,
-            receiver,
+            sender: monitor_tx,
             token,
         })
     }
@@ -55,8 +57,8 @@ impl SlotMonitor {
     }
 }
 
-impl Monitor<Slot> for SlotMonitor {
-    fn next(&mut self) -> impl std::future::Future<Output = Option<Slot>> + Send {
-        self.receiver.recv()
-    }
-}
+// impl Monitor<Slot> for SlotMonitor {
+//     fn next(&mut self) -> impl std::future::Future<Output = Option<Slot>> + Send {
+//         self.receiver.recv()
+//     }
+// }
