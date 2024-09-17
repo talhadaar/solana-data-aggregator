@@ -1,6 +1,7 @@
 use nanodb::error::NanoDBError;
 use solana_client::client_error::ClientError;
 use solana_client::pubsub_client::PubsubClientError;
+use solana_program::clock::Slot;
 use std::env::VarError;
 use thiserror::Error;
 
@@ -20,6 +21,12 @@ pub enum Error {
     StorageError(String),
     #[error("Var Error: {0}")]
     VarError(String),
+    #[error("Slot Skipped: {0}")]
+    SlotSkipped(Slot),
+    #[error("Slot Missing: {0}")]
+    SlotMissing(Slot),
+    #[error("Join Error: {0}")]
+    JoinError(String),
 }
 
 impl From<VarError> for Error {

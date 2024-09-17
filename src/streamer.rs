@@ -1,5 +1,7 @@
 use crate::error::*;
 use crate::{traits::BlockStream, types::*};
+use solana_client::client_error::ClientErrorKind;
+use solana_client::rpc_request::RpcError;
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcBlockConfig};
 use solana_program::{clock::Slot, system_program::ID};
 use solana_transaction_status::{
@@ -9,6 +11,11 @@ use solana_transaction_status::{
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio_util::sync::CancellationToken;
+
+/// [Reference](https://support.quicknode.com/hc/en-us/articles/16459608696721-Solana-RPC-Error-Code-Reference)
+const BLOCK_NOT_AVAILABLE: i64 = -32004;
+/// [Reference](https://support.quicknode.com/hc/en-us/articles/16459608696721-Solana-RPC-Error-Code-Reference)
+const SLOT_SKIPPED: i64 = -32007;
 
 pub fn parse_instruction(instruction: &UiInstruction) -> Option<Transaction> {
     if let UiInstruction::Parsed(UiParsedInstruction::Parsed(parsed_instruction)) = instruction {
@@ -83,6 +90,7 @@ impl Streamer {
         block_config: RpcBlockConfig,
     ) -> Result<Self> {
         let client = RpcClient::new(rpc_url);
+        log::debug!("Streamer: RpcClient created");
         Ok(Self {
             client: Arc::new(client),
             block_config: Arc::new(block_config),
@@ -92,15 +100,28 @@ impl Streamer {
     }
 
     pub async fn fetch_block(&self, slot: Slot) -> Result<Block> {
-        let block = match self
+        let block = self
             .client
             .get_block_with_config(slot, *self.block_config)
             .await
-        {
-            Ok(block) => block,
-            Err(e) => return Err(Error::RpcError(e)),
-        };
-        Ok(Block::from(block))
+            .map_err(|error| {
+                if let ClientErrorKind::RpcError(rpc_error) = error.kind() {
+                    if let RpcError::RpcResponseError { code, .. } = rpc_error {
+                        if code == &BLOCK_NOT_AVAILABLE {
+                            return Error::SlotMissing(slot);
+                        }
+                        if code == &SLOT_SKIPPED {
+                            return Error::SlotSkipped(slot);
+                        }
+                    }
+                }
+                return Error::RpcError(error);
+            });
+
+        match block {
+            Ok(block) => Ok(Block::from(block)),
+            Err(e) => Err(e),
+        }
     }
 }
 
@@ -108,6 +129,7 @@ impl BlockStream for Streamer {
     async fn next(&mut self) -> StreamerResult {
         loop {
             if self.token.is_cancelled() {
+                log::info!("TERMINATING");
                 return StreamerResult::Error(Error::Termination);
             }
 

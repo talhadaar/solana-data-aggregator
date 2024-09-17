@@ -1,7 +1,7 @@
 extern crate dotenv;
 use dotenv::dotenv;
 
-use solana_aggregator::{aggregator, error::Result, monitor, storage, streamer};
+use solana_data_aggregator::{aggregator, error::Result, monitor, storage, streamer};
 use solana_client::rpc_config::RpcBlockConfig;
 use solana_transaction_status::UiTransactionEncoding;
 use tokio::{signal::ctrl_c, sync::mpsc};
@@ -9,6 +9,9 @@ use tokio_util::sync::CancellationToken;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // start logger
+    env_logger::init();
+
     // config env
     dotenv().ok();
 
@@ -45,18 +48,11 @@ async fn main() -> Result<()> {
     // graceful shutdown monitor
     let shutdown_token = token.clone();
     let shutdown_fut = tokio::spawn(async move {
-        ctrl_c().await.unwrap();
+        ctrl_c().await.expect("failed to listen for ctrl+c event");
+        log::info!("TERMINATING");
         shutdown_token.cancel();
     });
 
-    tokio::join!(monitor_fut, aggregator_fut, shutdown_fut);
-    // {
-    //     (Err(monitor), Err(aggregator), Err(shutdown)) => {
-    //         log::error!("Join Error: Monitor {}, Aggregator {}, Shutdown {}", monitor, aggregator, shutdown);
-    //         token.cancel();
-    //     }
-    //     (_, _, _) => {}
-    // }
-
+    let _ = tokio::join!(shutdown_fut, monitor_fut, aggregator_fut);
     Ok(())
 }

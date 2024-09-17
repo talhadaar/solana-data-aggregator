@@ -20,8 +20,14 @@ impl SlotMonitor {
         monitor_tx: UnboundedSender<Slot>,
     ) -> Result<Self> {
         let client = Arc::new(match PubsubClient::new(wss_url).await {
-            Ok(client) => client,
-            Err(e) => return Err(Error::PubSubError(e)),
+            Ok(client) => {
+                log::debug!("PubsubClient created");
+                client
+            }
+            Err(e) => {
+                log::error!("SlotMonitor: PubsubClient creation failed: {}", e);
+                return Err(Error::PubSubError(e));
+            }
         });
         Ok(Self {
             client,
@@ -33,31 +39,38 @@ impl SlotMonitor {
     pub async fn start_monitoring(&self) -> Result<()> {
         // create subscription
         let (mut sub, unsub) = match self.client.slot_subscribe().await {
-            Ok(sub) => sub,
-            Err(e) => return Err(Error::PubSubError(e)),
+            Ok(sub) => {
+                log::debug!("Slot Subscription created");
+                sub
+            }
+            Err(e) => {
+                log::error!("Slot Subscription failed: {}", e);
+                return Err(Error::PubSubError(e));
+            }
         };
 
+        log::info!("Starting slot monitoring");
         loop {
-            tokio::select! {
-                _ = self.token.cancelled() => {
-                    // If cancellation occurs, unsubscribe and return
-                    unsub().await;
-                    return Err(Error::Termination);
-                }
-                Some(slot_info) = sub.next() => {
-                    // If a slot notification is received, queue the slot for processing
-                    match self.sender.send(slot_info.root) {
-                        Ok(_) => (),
-                        Err(e) => return Err(Error::ChannelFailed("SlotMonitor".to_string(), e.to_string())),
+            if self.token.is_cancelled() {
+                // If cancellation occurs, unsubscribe and return
+                unsub().await;
+                log::info!("TERMINATING");
+                return Err(Error::Termination);
+            }
+
+            if let Some(slot_info) = sub.next().await {
+                // If a slot notification is received, queue the slot for processing
+                match self.sender.send(slot_info.root) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        log::error!("Channel failure: {}", e);
+                        return Err(Error::ChannelFailed(
+                            "SlotMonitor".to_string(),
+                            e.to_string(),
+                        ));
                     }
                 }
             }
         }
     }
 }
-
-// impl Monitor<Slot> for SlotMonitor {
-//     fn next(&mut self) -> impl std::future::Future<Output = Option<Slot>> + Send {
-//         self.receiver.recv()
-//     }
-// }

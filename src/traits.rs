@@ -5,12 +5,6 @@ pub trait Stream<T> {
     fn next(&mut self) -> impl std::future::Future<Output = Option<T>> + Send;
 }
 
-/// Returns an slot notification from monitor's queue of type [UnboundedReceiver<T>]
-/// Returns None if monitor is terminated or there was no slot notification
-pub trait Monitor<T> {
-    fn next(&mut self) -> impl std::future::Future<Output = Option<T>> + Send;
-}
-
 /// Returns latest produced block on Solana
 /// async because needs might need to do some async operations within it's scope
 /// Not expected to return a future

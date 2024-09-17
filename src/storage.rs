@@ -98,6 +98,7 @@ impl Storage for Database {
                 .await?;
         }
         self.0.insert(&block_key, block).await?;
+        self.0.write().await?;
         Ok(())
     }
 
