@@ -21,7 +21,7 @@ struct Args {
     #[arg(short, long, default_value = None)]
     wss_provider: String,
 
-    /// Path for our JSON DB
+    /// Path for our JSON DB file e.g. /tmp/solana_data_aggregator.json
     #[arg(short, long, default_value = None)]
     db_path: String,
 }

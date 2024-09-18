@@ -2,6 +2,11 @@
 name = "solana-data-aggregator"
 version = "0.1.0"
 edition = "2021"
+authors = ["talhadaar <muhammadtalhadar@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/talhadaar/solana-data-aggregator"
+readme = "README.md"
+description = "Tiny Solana data aggregator"
 
 [lib]
 name = "solana_data_aggregator"
