@@ -37,6 +37,11 @@ async fn get_account(
     }
 }
 
+/// Starts the API server on the provided socket address
+/// The server will run until the token is cancelled
+/// The server will provide two routes:
+/// - /transactions?address=<address> - returns all transactions associated with the address
+/// - /account?address=<address> - returns all info stored in the account
 pub async fn run_api(address: SocketAddr, db: Database, token: CancellationToken) {
     let db_move = db.clone();
     let get_transactions_route = warp::path!("transactions")

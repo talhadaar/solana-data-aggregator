@@ -84,12 +84,12 @@ pub struct Streamer {
 
 impl Streamer {
     pub async fn new(
-        rpc_url: String,
+        rpc_url: &str,
         token: CancellationToken,
         slot_monitor: UnboundedReceiver<Slot>,
         block_config: RpcBlockConfig,
     ) -> Result<Self> {
-        let client = RpcClient::new(rpc_url);
+        let client = RpcClient::new(rpc_url.to_string());
         log::debug!("Streamer: RpcClient created");
         Ok(Self {
             client: Arc::new(client),
