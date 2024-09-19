@@ -1,3 +1,7 @@
+/// TODO could create interface traits for Transaction, Block and Account types
+/// So that we could enforce what information is required for each type to contain
+
+
 use crate::error::Error;
 use serde::{Deserialize, Serialize};
 
@@ -34,6 +38,7 @@ pub struct Transaction {
     pub amount: u64,
 }
 
+/// TODO make Block type generic over the type of transactions it contains by trait constraints
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Block {
     pub height: u64,
@@ -42,6 +47,7 @@ pub struct Block {
     pub transactions: Vec<Transaction>,
 }
 
+/// TODO make Account type generic over the type of Address it contains
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Default)]
 pub struct Account {
     pub address: Address,

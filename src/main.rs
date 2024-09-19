@@ -6,6 +6,9 @@ use std::net::SocketAddr;
 use tokio::{signal::ctrl_c, sync::mpsc};
 use tokio_util::sync::CancellationToken;
 
+/// Solana Data Aggregator CLI
+/// Should use .env file instead of command line arguments
+/// As API Keys and other sensitive information should not be exposed
 #[derive(Parser)]
 #[command(version, about, long_about = "Solana Data Aggregator")]
 struct Args {

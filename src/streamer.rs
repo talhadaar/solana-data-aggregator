@@ -135,6 +135,9 @@ impl BlockStream for Streamer {
 
             return match self.slot_monitor.recv().await {
                 Some(slot) => match self.fetch_block(slot).await {
+                    // TODO use mpmc channels
+                    // Consumer tasks will take the slot notifications, then fetch and parse the block
+                    // then pass block onto a multi-producer-multi-consumer queue for the Aggregators
                     Ok(block) => StreamerResult::Block(block),
                     Err(e) => StreamerResult::Error(e),
                 },

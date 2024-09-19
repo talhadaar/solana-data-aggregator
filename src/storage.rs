@@ -45,7 +45,7 @@ impl Storage for Database {
         }
 
         for (index, transaction) in block.transactions.iter().enumerate() {
-            // Record transactions done by sender
+            // Record transactions done by sender in their transaction index
             let tx_index = TransactionIndex {
                 block_height: block.height,
                 index,

@@ -156,5 +156,18 @@ Options:
           Print version
 ```
 
+## Deliverables
+Some notes on deliverables required.
+
+### 1. Data Aggregator Application
+- Application is a CLI implemented with clap, and will run with a single command.
+- Its structured into self contained modules and uses trait constraits.
+### 2. Documentation 
+- A README.md is provided for an overview and usage.
+- Inline comments facilitate better understanding of the system and suggest potential improvements.
+### 3. Testing
+- Unit tests are provided, however the coverage is not production worthy due to a lack of time.
+- `request` crate addition creates dependency issues, as a consequence, unit tests on the REST API are commented out.
+  
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
