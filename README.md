@@ -108,14 +108,23 @@ curl 127.0.0.1:8080/transactions?address=tKeYE4wtowRb8yRroZShTipE18YVnqwXjsSAoNs
 
 ### Prerequisites
 
-- Rust and Cargo installed. If you don't have them installed, you can get them [here](https://www.rust-lang.org/tools/install).
+- Need to have Rust and Cargo installed [here](https://www.rust-lang.org/tools/install).
+- Ensure you have rust nightly toolchain
+```bash
+rustup default nightly
+```
 
 ### Install and run
 
 ```bash
+# clone the repo
 git clone https://github.com/talhadaar/solana-data-aggregator
+# move into project repo
 cd solana-data-aggregator
+# launch project
 RUST_LOG=debug cargo run -- -s 127.0.0.1:8080 -r https://damp-few-replica.solana-devnet.quiknode.pro/bb864ce02bee463a190907961fe48e4c7cf5385b -w wss://damp-few-replica.solana-devnet.quiknode.pro/bb864ce02bee463a190907961fe48e4c7cf5385b -d /tmp/solana-data-aggregator.json
+# unit testing
+cargo test
 ```
 
 ## Command line interface 
