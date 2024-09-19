@@ -8,7 +8,7 @@ A Rust based application that fetches and aggregates data from solana blockchain
   this was an introduction to Solana's SDK and web development. There may be better ways to accomplish this task,
   altough, I have made decisions to the best of my new found knowledge.
 - This app only records native Sol transactions for simplicity, data structures and parsers could be extended to decode and record more types of transactions.
-- As this solution is overdue, so I've decided to skip unit testing. In a production environment, I wouldn't ship anything without adequate coverage.
+- I don't believe testing coverage is adequate enough, and for the sake of time I have decided to skip some tests.
 
 ## Design
 

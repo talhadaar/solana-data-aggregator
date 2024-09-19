@@ -28,9 +28,9 @@ pub struct ChainMedadata {
 #[derive(Debug, Clone)]
 pub struct Database(NanoDB);
 impl Database {
-    pub fn new(path: &str) -> Self {
-        let db = NanoDB::open(path).unwrap();
-        Self(db)
+    pub fn new(path: &str) -> Result<Self> {
+        let db = NanoDB::open(path)?;
+        Ok(Self(db))
     }
 }
 
@@ -103,7 +103,7 @@ impl Storage for Database {
         Ok(())
     }
 
-    async fn get_transactions(&self, address: Address) -> Result<Vec<Transaction>> {
+    async fn get_transactions(&self, address: &Address) -> Result<Vec<Transaction>> {
         let tx_index = match self
             .0
             .data()
@@ -159,5 +159,49 @@ impl Storage for Database {
             address: address.clone(),
             balance,
         })
+    }
+}
+
+#[cfg(test)]
+mod storage_tests {
+    use crate::storage::Database;
+    use crate::traits::Storage;
+    use crate::types::*;
+    use rand::Rng;
+
+    #[tokio::test]
+    async fn sanity_check() {
+        let path = "/tmp/storage.json";
+        let mut db = Database::new(path).unwrap();
+
+        let mut rng = rand::thread_rng();
+        let block_height: u64 = rng.gen_range(0..10000000);
+        let source = String::from(format!("source{}", block_height));
+        let destination = String::from(format!("destination{}", block_height));
+        let block_hash = String::from(format!("block_hash{}", block_height));
+
+        let amount = 100;
+        let transaction = Transaction {
+            source: source.to_string(),
+            destination: destination.to_string(),
+            amount,
+        };
+
+        let block = Block {
+            height: block_height,
+            transactions: vec![transaction],
+            hash: block_hash.to_string(),
+            timestamp: 100100,
+        };
+        db.add_block(&block).await.unwrap();
+
+        let transactions = db.get_transactions(&source).await.unwrap();
+        assert_eq!(transactions.len(), 1);
+        assert_eq!(transactions[0].amount, amount);
+        assert_eq!(transactions[0].source, source);
+        assert_eq!(transactions[0].destination, destination);
+
+        let account = db.get_account(&destination).await.unwrap();
+        assert_eq!(account.balance, amount as i64);
     }
 }

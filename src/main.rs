@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
     log::debug!("Slot monitor started");
 
     // create storage instance
-    let storage = storage::Database::new(&args.db_path);
+    let storage = storage::Database::new(&args.db_path)?;
     log::debug!("Storage initialized");
 
     // create streamer

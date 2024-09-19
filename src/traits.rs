@@ -22,7 +22,7 @@ pub trait Storage {
     /// Processes an action received from the [ActionsQueueRx]
     // async fn process_action(&self, action: Action) -> Result<()>;
     async fn add_block(&mut self, block: &Block) -> Result<()>;
-    async fn get_transactions(&self, address: Address) -> Result<Vec<Transaction>>;
+    async fn get_transactions(&self, address: &Address) -> Result<Vec<Transaction>>;
     async fn get_account(&self, address: &Address) -> Result<Account>;
 }
 

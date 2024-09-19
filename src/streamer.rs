@@ -115,7 +115,7 @@ impl Streamer {
                         }
                     }
                 }
-                return Error::RpcError(error);
+                Error::RpcError(error)
             });
 
         match block {
