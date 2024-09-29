@@ -5,7 +5,7 @@ use tokio_util::sync::CancellationToken;
 
 /// TODO should use a multi-producer-multi-consumer channel
 /// Each block is fetched and parsed by a Consumer task and sent to another multi-producer-multi-consumer channel
-/// Each Aggregator task will take the block from the channel and store 
+/// Each Aggregator task will take the block from the channel and store
 /// This will relieve the need for `Aggregator::run` task to block on self.storage.add_block() operation
 pub struct Aggregator<T: BlockStream, S: Storage> {
     pub streamer: T,

@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::traits::ActionsQueue;
 use crate::traits::Storage;
 use crate::types::*;
 use nanodb::nanodb::NanoDB;
@@ -6,6 +7,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use solana_program::clock::Slot;
 use std::fmt::Display;
+use tokio::sync::oneshot;
+use tokio_util::sync::CancellationToken;
 
 pub const LATEST_BLOCKHEIGHT_KEY: &str = "latest_bh";
 
@@ -25,6 +28,48 @@ pub struct ChainMedadata {
     pub last_block_height: u64,
 }
 
+async fn receive<T>(receiver: oneshot::Receiver<T>, source: &str) -> Result<T> {
+    receiver
+        .await
+        .map_err(|error| Error::ChannelFailed(source.to_string(), error.to_string()))
+}
+
+async fn send(sender: ActionsQueueTx, action: Action, source: &str) -> Result<()> {
+    sender
+        .send(action)
+        .await
+        .map_err(|err| Error::ChannelFailed(source.to_string(), err.to_string()))
+}
+
+const ADD_BLOCK_SOURCE: &str = "add_block";
+const GET_ACCOUNTS_SOURCE: &str = "get_accounts";
+const GET_TRANSACTIONS_SOURCE: &str = "get_transactions";
+
+#[derive(Clone)]
+pub struct StorageInterface(ActionsQueueTx);
+impl ActionsQueue for StorageInterface {
+    async fn add_block(&mut self, block: Block) -> AddBlockResult {
+        let (tx, rx) = oneshot::channel();
+        let action = Action::AddBlock(block, tx);
+        // send action to actions queue
+        send(self.0.clone(), action, ADD_BLOCK_SOURCE).await?;
+        receive(rx, ADD_BLOCK_SOURCE).await?
+    }
+
+    async fn get_account(&mut self, address: Address) -> GetAccountsResult {
+        let (tx, rx) = oneshot::channel();
+        let action = Action::GetAccounts(address, tx);
+        send(self.0.clone(), action, GET_ACCOUNTS_SOURCE).await?;
+        receive(rx, GET_ACCOUNTS_SOURCE).await?
+    }
+    async fn get_transactions(&mut self, address: Address) -> GetTransactionsResult {
+        let (tx, rx) = oneshot::channel();
+        let action = Action::GetTransactions(address, tx);
+        send(self.0.clone(), action, ADD_BLOCK_SOURCE).await?;
+        receive(rx, GET_TRANSACTIONS_SOURCE).await?
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Database(NanoDB);
 impl Database {
@@ -35,7 +80,56 @@ impl Database {
 }
 
 impl Storage for Database {
-    async fn add_block(&mut self, block: &Block) -> Result<()> {
+    async fn serve_queue(
+        &mut self,
+        mut actions_queue: ActionsQueueRx,
+        token: CancellationToken,
+    ) -> Result<()> {
+        loop {
+            if token.is_cancelled() {
+                log::info!("TERMINATION");
+                return Err(Error::Termination);
+            }
+
+            if let Some(action) = actions_queue.recv().await {
+                if let Err(Error::ChannelFailed(a, b)) = self.process_action(action).await {
+                    log::error!("Channel failure {:?} {:?}", a, b);
+                }
+            }
+        }
+    }
+
+    async fn process_action(&mut self, action: Action) -> Result<()> {
+        match action {
+            Action::AddBlock(block, sender) => {
+                if let Err(_) = sender.send(self.add_block(&block).await) {
+                    return Err(Error::ChannelFailed(
+                        "add_block".to_string(),
+                        "send failed".to_string(),
+                    ));
+                }
+            }
+            Action::GetAccounts(account, sender) => {
+                if let Err(_) = sender.send(self.get_account(&account).await) {
+                    return Err(Error::ChannelFailed(
+                        "get_account".to_string(),
+                        "send failed".to_string(),
+                    ));
+                }
+            }
+            Action::GetTransactions(address, sender) => {
+                if let Err(_) = sender.send(self.get_transactions(&address).await) {
+                    return Err(Error::ChannelFailed(
+                        "get_transactions".to_string(),
+                        "send failed".to_string(),
+                    ));
+                }
+            }
+        };
+        Ok(())
+    }
+
+    async fn add_block(&mut self, block: &Block) -> AddBlockResult {
         let block_key = db_key(DbKey::Block, &block.height);
         if self.0.data().await.get(&block_key).is_ok() {
             return Err(Error::StorageError(format!(
@@ -103,7 +197,7 @@ impl Storage for Database {
         Ok(())
     }
 
-    async fn get_transactions(&self, address: &Address) -> Result<Vec<Transaction>> {
+    async fn get_transactions(&self, address: &Address) -> GetTransactionsResult {
         let tx_index = match self
             .0
             .data()
@@ -139,7 +233,7 @@ impl Storage for Database {
         Ok(transactions)
     }
 
-    async fn get_account(&self, address: &Address) -> Result<Account> {
+    async fn get_account(&self, address: &Address) -> GetAccountsResult {
         let balance = match self
             .0
             .data()
