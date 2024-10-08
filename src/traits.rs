@@ -1,3 +1,5 @@
+use tokio_util::sync::CancellationToken;
+
 use crate::error::*;
 use crate::types::*;
 
@@ -18,20 +20,24 @@ pub trait BlockStream {
 #[trait_variant::make(Send)]
 pub trait Storage {
     /// Monitors an [ActionsQueueRx] for new DB operations
-    // async fn serve_queue(&self, actions_queue: ActionsQueueRx) -> Result<()>;
+    async fn serve_queue(
+        &mut self,
+        actions_queue: ActionsQueueRx,
+        token: CancellationToken,
+    ) -> Result<()>;
     /// Processes an action received from the [ActionsQueueRx]
-    // async fn process_action(&self, action: Action) -> Result<()>;
-    async fn add_block(&mut self, block: &Block) -> Result<()>;
-    async fn get_transactions(&self, address: &Address) -> Result<Vec<Transaction>>;
-    async fn get_account(&self, address: &Address) -> Result<Account>;
+    async fn process_action(&mut self, action: Action) -> Result<()>;
+    async fn add_block(&mut self, block: &Block) -> AddBlockResult;
+    async fn get_transactions(&self, address: &Address) -> GetTransactionsResult;
+    async fn get_account(&self, address: &Address) -> GetAccountsResult;
 }
 
-// /// Abstraction over the [Storage] trait for the [Aggregator]
-// /// Adds actions to the [ActionsQueueTx] for the [Storage] to process
-// /// Awaits for [Storage] to process the action and returns the result
-// pub trait ActionsQueue {
-//     fn new(actions_queue: ActionsQueueTx) -> Self;
-//     async fn add_block(&self, block: Block) -> ActionResult;
-//     async fn get_account(&self, address: Address) -> ActionResult;
-//     async fn get_transactions(&self, address: Address) -> ActionResult;
-// }
+/// Abstraction over the [Storage] trait for the [Aggregator]
+/// Adds actions to the [ActionsQueueTx] for the [Storage] to process
+/// Awaits for [Storage] to process the action and returns the result
+#[trait_variant::make(Send)]
+pub trait ActionsQueue {
+    async fn add_block(&mut self, block: Block) -> AddBlockResult;
+    async fn get_account(&mut self, address: Address) -> GetAccountsResult;
+    async fn get_transactions(&mut self, address: Address) -> GetTransactionsResult;
+}

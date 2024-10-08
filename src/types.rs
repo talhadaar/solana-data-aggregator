@@ -1,17 +1,14 @@
 /// TODO could create interface traits for Transaction, Block and Account types
 /// So that we could enforce what information is required for each type to contain
-
-
-use crate::error::Error;
+use crate::error::{Error, Result};
 use serde::{Deserialize, Serialize};
+use tokio::sync::{mpsc, oneshot};
 
 pub type Hash = String;
 pub type Address = String;
 
-// pub type ActionsQueueRx = mpsc::UnboundedReceiver<Action>;
-// pub type ActionsQueueTx = mpsc::UnboundedSender<Action>;
-// pub type SlotMonitorRx = mpsc::UnboundedReceiver<Slot>;
-// pub type SlotMonitorTx = mpsc::UnboundedSender<Slot>;
+pub type ActionsQueueRx = mpsc::Receiver<Action>;
+pub type ActionsQueueTx = mpsc::Sender<Action>;
 
 pub enum StreamerResult {
     Block(Block),
@@ -19,17 +16,25 @@ pub enum StreamerResult {
     Error(Error),
 }
 
-// pub enum ActionResult {
-//     BlockAdded(Result<()>),
-//     GetAccounts(Result<Vec<Account>>),
-//     GetTransactions(Result<Vec<Transaction>>),
-// }
+pub type AddBlockResult = Result<()>;
+pub type GetTransactionsResult = Result<Vec<Transaction>>;
+pub type GetAccountsResult = Result<Account>;
 
-// pub enum Action {
-//     AddBlock(Block, oneshot::Sender<ActionResult>),
-//     GetTransactions(ActionResult),
-//     GetAccounts(ActionResult),
-// }
+pub enum Action {
+    AddBlock(Block, oneshot::Sender<AddBlockResult>),
+    GetTransactions(Address, oneshot::Sender<GetTransactionsResult>),
+    GetAccounts(Address, oneshot::Sender<GetAccountsResult>),
+}
+
+impl Action {
+    pub async fn send(self, sender: mpsc::Sender<Action>, source: &str) -> Result<()> {
+        sender
+            .send(self)
+            .await
+            .map_err(|error| Error::ChannelFailed(source.to_string(), error.to_string()))?;
+        Ok(())
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Default)]
 pub struct Transaction {
